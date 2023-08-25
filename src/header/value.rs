@@ -17,6 +17,7 @@ use crate::header::name::HeaderName;
 /// To handle this, the `HeaderValue` is useable as a type and can be compared
 /// with strings and implements `Debug`. A `to_str` fn is provided that returns
 /// an `Err` if the header value contains non visible ascii characters.
+#[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Clone, Hash)]
 pub struct HeaderValue {
     inner: Bytes,
@@ -85,6 +86,7 @@ impl HeaderValue {
         let mut i = 0;
         while i < bytes.len() {
             if !is_visible_ascii(bytes[i]) {
+                #[allow(clippy::no_effect)]
                 ([] as [u8; 0])[0]; // Invalid header value
             }
             i += 1;
@@ -122,6 +124,7 @@ impl HeaderValue {
     /// assert!(val.is_err());
     /// ```
     #[inline]
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(src: &str) -> Result<HeaderValue, InvalidHeaderValue> {
         HeaderValue::try_from_generic(src, |s| Bytes::copy_from_slice(s.as_bytes()))
     }
@@ -191,6 +194,10 @@ impl HeaderValue {
     ///
     /// This function does NOT validate that illegal bytes are not contained
     /// within the buffer.
+    ///
+    /// # Safety
+    ///
+    /// You must ensures that the `src` is made of valid utf8 bytes.
     pub unsafe fn from_maybe_shared_unchecked<T>(src: T) -> HeaderValue
     where
         T: AsRef<[u8]> + 'static,
@@ -699,7 +706,7 @@ impl PartialOrd<HeaderValue> for [u8] {
 impl PartialEq<String> for HeaderValue {
     #[inline]
     fn eq(&self, other: &String) -> bool {
-        *self == &other[..]
+        *self == other[..]
     }
 }
 

@@ -642,7 +642,7 @@ impl<T> HeaderMap<T> {
             assert!(cap <= MAX_SIZE, "header map reserve over max capacity");
             assert!(cap != 0, "header map reserve overflowed");
 
-            if self.entries.len() == 0 {
+            if self.entries.is_empty() {
                 self.mask = cap as Size - 1;
                 self.indices = vec![Pos::none(); cap].into_boxed_slice();
                 self.entries = Vec::with_capacity(usable_capacity(cap));
@@ -1083,22 +1083,22 @@ impl<T> HeaderMap<T> {
             danger,
             Entry::Vacant(VacantEntry {
                 map: self,
-                hash: hash,
+                hash,
                 key: key.into(),
-                probe: probe,
-                danger: danger,
+                probe,
+                danger,
             }),
             Entry::Occupied(OccupiedEntry {
                 map: self,
                 index: pos,
-                probe: probe,
+                probe,
             }),
             Entry::Vacant(VacantEntry {
                 map: self,
-                hash: hash,
+                hash,
                 key: key.into(),
-                probe: probe,
-                danger: danger,
+                probe,
+                danger,
             })
         )
     }
@@ -1200,7 +1200,7 @@ impl<T> HeaderMap<T> {
 
         ValueDrain {
             first: Some(old),
-            next: next,
+            next,
             lt: PhantomData,
         }
     }
@@ -1324,7 +1324,7 @@ impl<T> HeaderMap<T> {
 
         if danger || num_displaced >= DISPLACEMENT_THRESHOLD {
             // Increase danger level
-            self.danger.to_yellow();
+            self.danger.into_yellow();
         }
 
         index
@@ -1406,7 +1406,7 @@ impl<T> HeaderMap<T> {
 
         // backward shift deletion in self.indices
         // after probe, shift all non-ideally placed indices backward
-        if self.entries.len() > 0 {
+        if !self.entries.is_empty() {
             let mut last_probe = probe;
             let mut probe = probe + 1;
 
@@ -1453,9 +1453,9 @@ impl<T> HeaderMap<T> {
         assert!(self.entries.len() < MAX_SIZE, "header map at capacity");
 
         self.entries.push(Bucket {
-            hash: hash,
-            key: key,
-            value: value,
+            hash,
+            key,
+            value,
             links: None,
         });
     }
@@ -1515,7 +1515,7 @@ impl<T> HeaderMap<T> {
 
             if load_factor >= LOAD_FACTOR_THRESHOLD {
                 // Transition back to green danger level
-                self.danger.to_green();
+                self.danger.into_green();
 
                 // Double the capacity
                 let new_cap = self.indices.len() * 2;
@@ -1523,7 +1523,7 @@ impl<T> HeaderMap<T> {
                 // Grow the capacity
                 self.grow(new_cap);
             } else {
-                self.danger.to_red();
+                self.danger.into_red();
 
                 // Rebuild hash table
                 for index in self.indices.iter_mut() {
@@ -1846,7 +1846,7 @@ where
     type Error = Error;
 
     fn try_from(c: &'a HashMap<K, V>) -> Result<Self, Self::Error> {
-        c.into_iter()
+        c.iter()
             .map(|(k, v)| -> crate::Result<(HeaderName, T)> {
                 let name = TryFrom::try_from(k).map_err(Into::into)?;
                 let value = TryFrom::try_from(v).map_err(Into::into)?;
@@ -1983,7 +1983,7 @@ impl<T> Default for HeaderMap<T> {
     }
 }
 
-impl<'a, K, T> ops::Index<K> for HeaderMap<T>
+impl<K, T> ops::Index<K> for HeaderMap<T>
 where
     K: AsHeaderName,
 {
@@ -2033,7 +2033,7 @@ fn append_value<T>(
         Some(links) => {
             let idx = extra.len();
             extra.push(ExtraValue {
-                value: value,
+                value,
                 prev: Link::Extra(links.tail),
                 next: Link::Entry(entry_idx),
             });
@@ -2045,7 +2045,7 @@ fn append_value<T>(
         None => {
             let idx = extra.len();
             extra.push(ExtraValue {
-                value: value,
+                value,
                 prev: Link::Entry(entry_idx),
                 next: Link::Entry(entry_idx),
             });
@@ -2406,9 +2406,9 @@ impl<'a, T> VacantEntry<'a, T> {
     /// ```
     pub fn insert(self, value: T) -> &'a mut T {
         // Ensure that there is space in the map
-        let index =
-            self.map
-                .insert_phase_two(self.key, value.into(), self.hash, self.probe, self.danger);
+        let index = self
+            .map
+            .insert_phase_two(self.key, value, self.hash, self.probe, self.danger);
 
         &mut self.map.entries[index].value
     }
@@ -2433,13 +2433,13 @@ impl<'a, T> VacantEntry<'a, T> {
     /// ```
     pub fn insert_entry(self, value: T) -> OccupiedEntry<'a, T> {
         // Ensure that there is space in the map
-        let index =
-            self.map
-                .insert_phase_two(self.key, value.into(), self.hash, self.probe, self.danger);
+        let index = self
+            .map
+            .insert_phase_two(self.key, value, self.hash, self.probe, self.danger);
 
         OccupiedEntry {
             map: self.map,
-            index: index,
+            index,
             probe: self.probe,
         }
     }
@@ -2845,7 +2845,7 @@ impl<'a, T> OccupiedEntry<'a, T> {
     /// assert_eq!("earth", map["host"]);
     /// ```
     pub fn insert(&mut self, value: T) -> T {
-        self.map.insert_occupied(self.index, value.into())
+        self.map.insert_occupied(self.index, value)
     }
 
     /// Sets the value of the entry.
@@ -2871,7 +2871,7 @@ impl<'a, T> OccupiedEntry<'a, T> {
     /// assert_eq!("earth", map["host"]);
     /// ```
     pub fn insert_mult(&mut self, value: T) -> ValueDrain<'_, T> {
-        self.map.insert_occupied_mult(self.index, value.into())
+        self.map.insert_occupied_mult(self.index, value)
     }
 
     /// Insert the value into the entry.
@@ -2898,7 +2898,7 @@ impl<'a, T> OccupiedEntry<'a, T> {
     pub fn append(&mut self, value: T) {
         let idx = self.index;
         let entry = &mut self.map.entries[idx];
-        append_value(idx, entry, &mut self.map.extra_values, value.into());
+        append_value(idx, entry, &mut self.map.extra_values, value);
     }
 
     /// Remove the entry from the map.
@@ -3076,12 +3076,12 @@ impl<'a, T> Iterator for ValueDrain<'a, T> {
             // Exactly 1
             (&Some(_), &None) => (1, Some(1)),
             // 1 + extras
-            (&Some(_), &Some(ref extras)) => {
+            (&Some(_), Some(extras)) => {
                 let (l, u) = extras.size_hint();
                 (l + 1, u.map(|u| u + 1))
             }
             // Extras only
-            (&None, &Some(ref extras)) => extras.size_hint(),
+            (&None, Some(extras)) => extras.size_hint(),
             // No more
             (&None, &None) => (0, Some(0)),
         }
@@ -3092,7 +3092,7 @@ impl<'a, T> FusedIterator for ValueDrain<'a, T> {}
 
 impl<'a, T> Drop for ValueDrain<'a, T> {
     fn drop(&mut self) {
-        while let Some(_) = self.next() {}
+        for _ in self.by_ref() {}
     }
 }
 
@@ -3131,7 +3131,7 @@ impl Pos {
         debug_assert!(index < MAX_SIZE);
         Pos {
             index: index as Size,
-            hash: hash,
+            hash,
         }
     }
 
@@ -3165,34 +3165,32 @@ impl Pos {
 
 impl Danger {
     fn is_red(&self) -> bool {
-        match *self {
-            Danger::Red(_) => true,
-            _ => false,
-        }
+        matches!(*self, Danger::Red(_))
     }
 
-    fn to_red(&mut self) {
+    #[allow(clippy::wrong_self_convention)]
+    fn into_red(&mut self) {
         debug_assert!(self.is_yellow());
         *self = Danger::Red(RandomState::new());
     }
 
     fn is_yellow(&self) -> bool {
-        match *self {
-            Danger::Yellow => true,
-            _ => false,
+        matches!(*self, Danger::Yellow)
+    }
+
+    fn is_green(&self) -> bool {
+        matches!(*self, Danger::Green)
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn into_yellow(&mut self) {
+        if self.is_green() {
+            *self = Danger::Yellow;
         }
     }
 
-    fn to_yellow(&mut self) {
-        match *self {
-            Danger::Green => {
-                *self = Danger::Yellow;
-            }
-            _ => {}
-        }
-    }
-
-    fn to_green(&mut self) {
+    #[allow(clippy::wrong_self_convention)]
+    fn into_green(&mut self) {
         debug_assert!(self.is_yellow());
         *self = Danger::Green;
     }
@@ -3395,7 +3393,7 @@ mod as_header_name {
         }
 
         fn as_str(&self) -> &str {
-            <HeaderName>::as_str(*self)
+            <HeaderName>::as_str(self)
         }
     }
 
@@ -3449,7 +3447,7 @@ mod as_header_name {
         }
 
         fn as_str(&self) -> &str {
-            *self
+            self
         }
     }
 

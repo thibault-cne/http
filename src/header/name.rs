@@ -1001,6 +1001,7 @@ standard_headers! {
 /// ```
 // HEADER_CHARS maps every byte that is 128 or larger to 0 so everything that is
 // mapped by HEADER_CHARS, maps to a valid single-byte UTF-8 codepoint.
+#[rustfmt::skip]
 const HEADER_CHARS: [u8; 256] = [
     //  0      1      2      3      4      5      6      7      8      9
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //   x
@@ -1034,6 +1035,7 @@ const HEADER_CHARS: [u8; 256] = [
 /// Valid header name characters for HTTP/2.0 and HTTP/3.0
 // HEADER_CHARS_H2 maps every byte that is 128 or larger to 0 so everything that is
 // mapped by HEADER_CHARS_H2, maps to a valid single-byte UTF-8 codepoint.
+#[rustfmt::skip]
 const HEADER_CHARS_H2: [u8; 256] = [
     //  0      1      2      3      4      5      6      7      8      9
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //   x
@@ -1255,7 +1257,7 @@ impl HeaderName {
             };
         }
 
-        if name_bytes.len() == 0 || name_bytes.len() > super::MAX_HEADER_NAME_LEN || {
+        if name_bytes.is_empty() || name_bytes.len() > super::MAX_HEADER_NAME_LEN || {
             let mut i = 0;
             loop {
                 if i >= name_bytes.len() {
@@ -1266,6 +1268,7 @@ impl HeaderName {
                 i += 1;
             }
         } {
+            #[allow(clippy::no_effect)]
             ([] as [u8; 0])[0]; // Invalid header name
         }
 
@@ -1281,7 +1284,7 @@ impl HeaderName {
     pub fn as_str(&self) -> &str {
         match self.inner {
             Repr::Standard(v) => v.as_str(),
-            Repr::Custom(ref v) => &*v.0,
+            Repr::Custom(ref v) => &v.0,
         }
     }
 
@@ -1548,7 +1551,7 @@ impl<'a> From<HdrName<'a>> for HeaderName {
             },
             Repr::Custom(maybe_lower) => {
                 if maybe_lower.lower {
-                    let buf = Bytes::copy_from_slice(&maybe_lower.buf[..]);
+                    let buf = Bytes::copy_from_slice(maybe_lower.buf);
                     // Safety: the invariant on MaybeLower ensures buf is valid UTF-8.
                     let byte_str = unsafe { ByteStr::from_shared_unchecked(buf) };
 

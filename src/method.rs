@@ -15,13 +15,13 @@
 //! assert_eq!(Method::POST.as_str(), "POST");
 //! ```
 
+use self::extension::{AllocatedExtension, InlineExtension};
 use self::Inner::*;
-use self::extension::{InlineExtension, AllocatedExtension};
 
 use std::convert::AsRef;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::str::FromStr;
-use std::convert::TryFrom;
 use std::{fmt, str};
 
 /// The Request Method (VERB)
@@ -66,7 +66,6 @@ enum Inner {
     // Otherwise, allocate it
     ExtensionAllocated(AllocatedExtension),
 }
-
 
 impl Method {
     /// GET
@@ -148,10 +147,7 @@ impl Method {
     /// See [the spec](https://tools.ietf.org/html/rfc7231#section-4.2.1)
     /// for more words.
     pub fn is_safe(&self) -> bool {
-        match self.0 {
-            Get | Head | Options | Trace => true,
-            _ => false,
-        }
+        matches!(self.0, Get | Head | Options | Trace)
     }
 
     /// Whether a method is considered "idempotent", meaning the request has
@@ -339,7 +335,7 @@ mod extension {
             let InlineExtension(ref data, len) = self;
             // Safety: the invariant of InlineExtension ensures that the first
             // len bytes of data contain valid UTF-8.
-            unsafe {str::from_utf8_unchecked(&data[..*len as usize])}
+            unsafe { str::from_utf8_unchecked(&data[..*len as usize]) }
         }
     }
 
@@ -357,7 +353,7 @@ mod extension {
         pub fn as_str(&self) -> &str {
             // Safety: the invariant of AllocatedExtension ensures that self.0
             // contains valid UTF-8.
-            unsafe {str::from_utf8_unchecked(&self.0)}
+            unsafe { str::from_utf8_unchecked(&self.0) }
         }
     }
 
@@ -381,16 +377,16 @@ mod extension {
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', //   x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', //  1x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', //  2x
-        b'\0', b'\0', b'\0',  b'!', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', //  3x
-        b'\0', b'\0',  b'*',  b'+', b'\0',  b'-',  b'.', b'\0',  b'0',  b'1', //  4x
-         b'2',  b'3',  b'4',  b'5',  b'6',  b'7',  b'8',  b'9', b'\0', b'\0', //  5x
-        b'\0', b'\0', b'\0', b'\0', b'\0',  b'A',  b'B',  b'C',  b'D',  b'E', //  6x
-         b'F',  b'G',  b'H',  b'I',  b'J',  b'K',  b'L',  b'M',  b'N',  b'O', //  7x
-         b'P',  b'Q',  b'R',  b'S',  b'T',  b'U',  b'V',  b'W',  b'X',  b'Y', //  8x
-         b'Z', b'\0', b'\0', b'\0',  b'^',  b'_',  b'`',  b'a',  b'b',  b'c', //  9x
-         b'd',  b'e',  b'f',  b'g',  b'h',  b'i',  b'j',  b'k',  b'l',  b'm', // 10x
-         b'n',  b'o',  b'p',  b'q',  b'r',  b's',  b't',  b'u',  b'v',  b'w', // 11x
-         b'x',  b'y',  b'z', b'\0',  b'|', b'\0',  b'~', b'\0', b'\0', b'\0', // 12x
+        b'\0', b'\0', b'\0', b'!', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', //  3x
+        b'\0', b'\0', b'*', b'+', b'\0', b'-', b'.', b'\0', b'0', b'1', //  4x
+        b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'\0', b'\0', //  5x
+        b'\0', b'\0', b'\0', b'\0', b'\0', b'A', b'B', b'C', b'D', b'E', //  6x
+        b'F', b'G', b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'O', //  7x
+        b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W', b'X', b'Y', //  8x
+        b'Z', b'\0', b'\0', b'\0', b'^', b'_', b'`', b'a', b'b', b'c', //  9x
+        b'd', b'e', b'f', b'g', b'h', b'i', b'j', b'k', b'l', b'm', // 10x
+        b'n', b'o', b'p', b'q', b'r', b's', b't', b'u', b'v', b'w', // 11x
+        b'x', b'y', b'z', b'\0', b'|', b'\0', b'~', b'\0', b'\0', b'\0', // 12x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 13x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 14x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 15x
@@ -403,7 +399,7 @@ mod extension {
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 22x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 23x
         b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 24x
-        b'\0', b'\0', b'\0', b'\0', b'\0', b'\0'                              // 25x
+        b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', // 25x
     ];
 
     // write_checked ensures (among other things) that the first src.len() bytes

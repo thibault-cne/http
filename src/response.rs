@@ -185,6 +185,7 @@ pub struct Response<T> {
 ///
 /// The HTTP response head consists of a status, version, and a set of
 /// header fields.
+#[allow(clippy::manual_non_exhaustive)]
 pub struct Parts {
     /// The response's status
     pub status: StatusCode,
@@ -251,7 +252,7 @@ impl<T> Response<T> {
     pub fn new(body: T) -> Response<T> {
         Response {
             head: Parts::new(),
-            body: body,
+            body,
         }
     }
 
@@ -272,10 +273,7 @@ impl<T> Response<T> {
     /// ```
     #[inline]
     pub fn from_parts(parts: Parts, body: T) -> Response<T> {
-        Response {
-            head: parts,
-            body: body,
-        }
+        Response { head: parts, body }
     }
 
     /// Returns the `StatusCode`.
@@ -748,19 +746,14 @@ impl Builder {
     ///     .unwrap();
     /// ```
     pub fn body<T>(self, body: T) -> Result<Response<T>> {
-        self.inner.map(move |head| {
-            Response {
-                head,
-                body,
-            }
-        })
+        self.inner.map(move |head| Response { head, body })
     }
 
     // private
 
     fn and_then<F>(self, func: F) -> Self
     where
-        F: FnOnce(Parts) -> Result<Parts>
+        F: FnOnce(Parts) -> Result<Parts>,
     {
         Builder {
             inner: self.inner.and_then(func),
