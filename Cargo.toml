@@ -33,7 +33,7 @@ exclude = [
 ]
 
 [dependencies]
-bytes = "1"
+bytes = { git = "https://github.com/thibault-cne/bytes.git", branch = "master" }
 fnv = "1.0.5"
 itoa = "1"
 
