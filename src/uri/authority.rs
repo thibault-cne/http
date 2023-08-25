@@ -3,10 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use std::{cmp, fmt, str};
 
-use bytes::Bytes;
+use bytes::{ByteStr, Bytes};
 
 use super::{ErrorKind, InvalidUri, Port, URI_CHARS};
-use crate::byte_str::ByteStr;
 
 /// Represents the authority component of a URI.
 #[derive(Clone)]
@@ -524,7 +523,7 @@ where
         // Safety: the postcondition on parse_non_empty() and the check against
         // s.len() ensure that b is valid UTF-8. The precondition on f ensures
         // that this is carried through to bytes.
-        data: unsafe { ByteStr::from_utf8_unchecked(bytes) },
+        data: unsafe { ByteStr::from_shared_unchecked(bytes) },
     })
 }
 

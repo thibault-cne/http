@@ -3,10 +3,9 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-use bytes::Bytes;
+use bytes::{ByteStr, Bytes};
 
 use super::{ErrorKind, InvalidUri};
-use crate::byte_str::ByteStr;
 
 /// Represents the scheme component of a URI
 #[derive(Clone)]
@@ -81,7 +80,7 @@ impl<'a> TryFrom<&'a [u8]> for Scheme {
 
                 // Safety: postcondition on parse_exact() means that s and
                 // hence bytes are valid UTF-8.
-                let string = unsafe { ByteStr::from_utf8_unchecked(bytes) };
+                let string = unsafe { ByteStr::from_shared_unchecked(bytes) };
 
                 Ok(Other(Box::new(string)).into())
             }
@@ -206,32 +205,32 @@ const MAX_SCHEME_LEN: usize = 64;
 // point. This means that a slice of such valid entries is valid UTF-8.
 const SCHEME_CHARS: [u8; 256] = [
     //  0      1      2      3      4      5      6      7      8      9
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //   x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  1x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  2x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, //  3x
-        0,     0,     0,  b'+',     0,  b'-',  b'.',     0,  b'0',  b'1', //  4x
-     b'2',  b'3',  b'4',  b'5',  b'6',  b'7',  b'8',  b'9',  b':',     0, //  5x
-        0,     0,     0,     0,     0,  b'A',  b'B',  b'C',  b'D',  b'E', //  6x
-     b'F',  b'G',  b'H',  b'I',  b'J',  b'K',  b'L',  b'M',  b'N',  b'O', //  7x
-     b'P',  b'Q',  b'R',  b'S',  b'T',  b'U',  b'V',  b'W',  b'X',  b'Y', //  8x
-     b'Z',     0,     0,     0,     0,     0,     0,  b'a',  b'b',  b'c', //  9x
-     b'd',  b'e',  b'f',  b'g',  b'h',  b'i',  b'j',  b'k',  b'l',  b'm', // 10x
-     b'n',  b'o',  b'p',  b'q',  b'r',  b's',  b't',  b'u',  b'v',  b'w', // 11x
-     b'x',  b'y',  b'z',     0,     0,     0,  b'~',     0,     0,     0, // 12x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 13x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 14x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 15x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 16x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 17x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 18x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 19x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 20x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 21x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 22x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 23x
-        0,     0,     0,     0,     0,     0,     0,     0,     0,     0, // 24x
-        0,     0,     0,     0,     0,     0                              // 25x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //   x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  1x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  2x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  3x
+    0, 0, 0, b'+', 0, b'-', b'.', 0, b'0', b'1', //  4x
+    b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b':', 0, //  5x
+    0, 0, 0, 0, 0, b'A', b'B', b'C', b'D', b'E', //  6x
+    b'F', b'G', b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'O', //  7x
+    b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W', b'X', b'Y', //  8x
+    b'Z', 0, 0, 0, 0, 0, 0, b'a', b'b', b'c', //  9x
+    b'd', b'e', b'f', b'g', b'h', b'i', b'j', b'k', b'l', b'm', // 10x
+    b'n', b'o', b'p', b'q', b'r', b's', b't', b'u', b'v', b'w', // 11x
+    b'x', b'y', b'z', 0, 0, 0, b'~', 0, 0, 0, // 12x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 13x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 14x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 15x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 17x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 18x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 19x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 20x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 21x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 22x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 23x
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 24x
+    0, 0, 0, 0, 0, 0, // 25x
 ];
 
 impl Scheme2<usize> {

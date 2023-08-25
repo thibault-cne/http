@@ -34,8 +34,6 @@ exclude = [
 
 [dependencies]
 bytes = { git = "https://github.com/thibault-cne/bytes.git", branch = "master" }
-fnv = "1.0.5"
-itoa = "1"
 
 [dev-dependencies]
 indexmap = "<=1.8"

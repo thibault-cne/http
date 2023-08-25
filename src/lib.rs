@@ -178,7 +178,6 @@ pub mod status;
 pub mod uri;
 pub mod version;
 
-mod byte_str;
 mod error;
 mod extensions;
 
